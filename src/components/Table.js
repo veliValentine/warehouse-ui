@@ -1,14 +1,20 @@
 import React from 'react';
+import JsxParser from 'react-jsx-parser';
 
-const Header = ({ headers }) => {
-  return (
-    <tr>
-      {headers.map(h => <th key={h}>{h.toUpperCase()}</th>)}
-    </tr>
-  );
-};
+const Header = ({ headers }) => (
+  <tr>
+    {headers.map(h => <th key={h}>{h.toUpperCase()}</th>)}
+  </tr>
+);
+
+const Availability = ({ children }) => children;
+
+const Instockvalue = ({ children }) => children;
 
 const Body = ({ data, headers }) => {
+  if (data.availability && (typeof data.availability === 'string' || data.availability instanceof String)) {
+    data.availability = <JsxParser components={{ AVAILABILITY: Availability, INSTOCKVALUE: Instockvalue }} jsx={data.availability} />;
+  }
   return (
     <tr>
       {headers.map(header => <td key={header}>{data[header]}</td>)}

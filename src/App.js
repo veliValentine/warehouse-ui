@@ -1,7 +1,23 @@
 import React from 'react';
 import Table from './components/Table';
 
-const d = [
+let derp = [
+  {
+    'code': 200,
+    'response': [
+      {
+        'id': 'F8016F8E3897CBD129EC0FDE',
+        'DATAPAYLOAD': '<AVAILABILITY><INSTOCKVALUE>INSTOCK</INSTOCKVALUE></AVAILABILITY>'
+      },
+      {
+        'id': 'D9FE8BA212795CBA3914DD',
+        'DATAPAYLOAD': '<AVAILABILITY>\n  <INSTOCKVALUE>INSTOCK</INSTOCKVALUE>\n</AVAILABILITY>'
+      },
+    ],
+  },
+];
+
+let data = [
   {
     'id': 'f8016f8e3897cbd129ec0fde',
     'type': 'shirts',
@@ -105,12 +121,20 @@ const d = [
 ];
 
 const App = () => {
+  //store data as key-value pair. ID is the key.
   let o = [];
-  for (let i = 0; i < d.length; i++) {
-    const da = d[i];
-    o[da.id] = da;
+  for (let i = 0; i < data.length; i++) {
+    const da = data[i];
+    o[da.id.toLowerCase()] = { ...da, id: da.id.toLowerCase() };
   }
-  const data = o;
+  data = o;
+
+  //Add availablitity information to data object
+  derp = derp[0].response.map(item => ({ id: item.id.toLowerCase(), availability: item.DATAPAYLOAD }));
+  derp.forEach(item => {
+    const id = item.id.toLowerCase();
+    data[id] = { ...data[id], availability: item.availability };
+  });
 
   return (
     <div>
@@ -122,5 +146,4 @@ const App = () => {
     </div>
   );
 };
-
 export default App;
