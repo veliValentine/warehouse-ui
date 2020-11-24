@@ -2,9 +2,9 @@ import React from 'react';
 import JsxParser from 'react-jsx-parser';
 
 const Header = ({ headers }) => (
-  <tr>
+  <th>
     {headers.map(h => <th key={h}>{h.toUpperCase()}</th>)}
-  </tr>
+  </th>
 );
 
 const Availability = ({ children }) => children;
@@ -13,6 +13,7 @@ const Instockvalue = ({ children }) => children;
 
 const Body = ({ data, headers }) => {
   if (data.availability && (typeof data.availability === 'string' || data.availability instanceof String)) {
+    console.log(data.availability);
     data.availability = <JsxParser components={{ AVAILABILITY: Availability, INSTOCKVALUE: Instockvalue }} jsx={data.availability} />;
   }
   return (

@@ -1,7 +1,10 @@
-import React from 'react';
-import Table from './components/Table';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-let derp = [
+import Table from './components/Table';
+import { FixedSizeGrid as WindowList } from 'react-window';
+
+const derpData = [
   {
     'code': 200,
     'response': [
@@ -17,7 +20,7 @@ let derp = [
   },
 ];
 
-let data = [
+const dataData = [
   {
     'id': 'f8016f8e3897cbd129ec0fde',
     'type': 'shirts',
@@ -121,29 +124,73 @@ let data = [
 ];
 
 const App = () => {
-  //store data as key-value pair. ID is the key.
-  let o = [];
-  for (let i = 0; i < data.length; i++) {
-    const da = data[i];
-    o[da.id.toLowerCase()] = { ...da, id: da.id.toLowerCase() };
+  const [data, setData] = useState(null);
+  const [availability, setAvailability] = useState(null);
+  const [product, setProduct] = useState('shirts');
+
+  const getProduct = () => {
+    return axios.get(`https://bad-api-assignment.reaktor.com/products/${product}`);
+  };
+
+  const getAvailability = (availability) => {
+    return axios.get(`https://bad-api-assignment.reaktor.com/availability/${availability}`
+      //, { headers: { 'x-force-error-mode': 'all' } }
+    );
+  };
+
+  useEffect(() => {
+    getProduct()
+      .then(response => {
+        const allData = response.data.map(item => ({ ...item, id: item.id.toLowerCase() }));
+        const keyValues = [];
+        allData.forEach(item => keyValues[item.id] = ({
+          0: item.name,
+          1: item.manufacturer,
+          2: item.price,
+          3: item.color.join(' '),
+          4: 'loading',
+          id: item.id,
+          type: item.type
+        }));
+        setData(keyValues);
+        setAvailability(keyValues);
+      });
+  }, []);
+
+  if (data) {
+    null;
   }
-  data = o;
-
-  //Add availablitity information to data object
-  derp = derp[0].response.map(item => ({ id: item.id.toLowerCase(), availability: item.DATAPAYLOAD }));
-  derp.forEach(item => {
-    const id = item.id.toLowerCase();
-    data[id] = { ...data[id], availability: item.availability };
-  });
-
   return (
     <div>
       <h1>Welcome!</h1>
-      <Table
-        data={Object.values(data)}
-        headers={Object.keys(Object.values(data)[0])}
-      />
+      <h3>{product}</h3>
+      {!data ? null :
+        <WindowList
+          height={500}
+          width={600}
+          columnCount={5}
+          columnWidth={100}
+          rowCount={Object.values(data).length}
+          rowHeight={50}
+          itemData={Object.values(data)}
+          style={{ borderBottomWidth: 1 }}
+        >
+          {Row}
+        </WindowList>
+      }
+    </div >
+  );
+};
+
+const Row = (props) => {
+  console.log({ props });
+  const { style, columnIndex, rowIndex, data } = props;
+  const item = data[rowIndex];
+  return (
+    <div style={{ ...style, borderBottomWidth: 1 }}>
+      {item[columnIndex]}
     </div>
   );
 };
+
 export default App;
