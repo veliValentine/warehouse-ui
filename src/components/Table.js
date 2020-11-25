@@ -7,14 +7,12 @@ const Header = ({ headers }) => (
   </th>
 );
 
-const Availability = ({ children }) => children;
-
-const Instockvalue = ({ children }) => children;
+const ReadAvailability = ({ children }) => children;
 
 const Body = ({ data, headers }) => {
   if (data.availability && (typeof data.availability === 'string' || data.availability instanceof String)) {
     console.log(data.availability);
-    data.availability = <JsxParser components={{ AVAILABILITY: Availability, INSTOCKVALUE: Instockvalue }} jsx={data.availability} />;
+    data.availability = <JsxParser components={{ AVAILABILITY: ReadAvailability, INSTOCKVALUE: ReadAvailability }} jsx={data.availability} />;
   }
   return (
     <tr>

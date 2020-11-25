@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import JsxParser from 'react-jsx-parser';
 
 import Table from './components/Table';
 import { FixedSizeGrid as WindowList } from 'react-window';
@@ -123,56 +124,138 @@ const dataData = [
   }
 ];
 
+const baseURI = 'https://bad-api-assignment.reaktor.com';
+
+const ReadAvailability = ({ children }) => children;
+
 const App = () => {
   const [data, setData] = useState(null);
-  const [availability, setAvailability] = useState(null);
+  const [reloadManufacturer, setReloadManufacturer] = useState(false);
   const [product, setProduct] = useState('shirts');
+  const [allData, setAllData] = useState({});
+
 
   const getProduct = () => {
-    return axios.get(`https://bad-api-assignment.reaktor.com/products/${product}`);
+    //console.log('getProduct');
+    return axios.get(`${baseURI}/products/${product}`);
   };
 
   const getAvailability = (availability) => {
-    return axios.get(`https://bad-api-assignment.reaktor.com/availability/${availability}`
+    //console.log('getAvailability');
+    return axios.get(`${baseURI}/availability/${availability}`
       //, { headers: { 'x-force-error-mode': 'all' } }
     );
   };
 
   useEffect(() => {
-    getProduct()
-      .then(response => {
-        const allData = response.data.map(item => ({ ...item, id: item.id.toLowerCase() }));
-        const keyValues = [];
-        allData.forEach(item => keyValues[item.id] = ({
-          0: item.name,
-          1: item.manufacturer,
-          2: item.price,
-          3: item.color.join(' '),
-          4: 'loading',
-          id: item.id,
-          type: item.type
-        }));
-        setData(keyValues);
-        setAvailability(keyValues);
-      });
-  }, []);
+    console.log('eka');
+    //see if product already fetched from server
+    const newAllData = allData;
+    if (!newAllData[product]) {
+      console.log('get product from server');
+      //get product information from server
+      getProduct()
+        .then(response => {
+          const productData = response.data.map(item => (
+            {
+              ...item,
+              id: item.id.toLowerCase()
+            }
+          ));
+          //Convert product data to key-value array
+          const keyValues = [];
+          productData.forEach(item =>
+            keyValues[item.id] = ({
+              //saved using integers as keys for react-window
+              0: item.name,
+              1: item.manufacturer,
+              2: item.price,
+              3: item.color.join(' '),
+              //initial value reload button to refetch availability information from server
+              4: <button onClick={() => setReloadManufacturer(item.manufacturer)}>reload</button>,
+              id: item.id,
+              type: item.type
+            })
+          );
+          //save product information
+          newAllData[product] = keyValues;
+          //Save all product availability information
+          Object.values(keyValues)
+            .map(item => item[1])
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .forEach(manufacturer => {
+              if (!newAllData[manufacturer]) {
+                console.log(`get ${manufacturer} from server`);
+                getAvailability(manufacturer)
+                  .then((response) => {
+                    const responseData = response.data.response;
+                    if (typeof responseData === 'object') {
+                      const availabilityData = responseData.map(item => (
+                        {
+                          id: item.id.toLowerCase(),
+                          datapayload: <JsxParser components={{ AVAILABILITY: ReadAvailability, INSTOCKVALUE: ReadAvailability }} jsx={item.DATAPAYLOAD} />,
+                        }
+                      ));
+                      newAllData[manufacturer] = availabilityData;
+                    } else {
+                      console.error('Server did not send data');
+                    }
+                  });
+              }
+            });
+          setAllData(newAllData);
+          setData(Object.values(newAllData[product]));
+        });
+    } else {
+      setData(Object.values(allData[product]));
+    }
+  }, [product]);
+
+  useEffect(() => {
+    console.log('toka');
+    if(allData[product]){
+      console.log('on olemassa');
+    }
+  }, [product, allData] );
+
+
+  /*
+  if (allData) {
+    console.log(Object.keys(allData));
+    if (allData[product]) {
+      console.log(Object.values(allData[product])[0]);
+      console.log();
+    }
+  }
 
   if (data) {
-    null;
+    console.log('DATA');
   }
+*/
+  const buttons = () => {
+    const buttons = [
+      <button key={'jackets'} onClick={() => setProduct('jackets')}>Jackets</button>,
+      <button key={'shirts'} onClick={() => setProduct('shirts')}>Shirts</button>,
+      <button key={'accessories'} onClick={() => setProduct('accessories')}>Accessories</button>,
+    ];
+
+    return buttons.filter(button => button.key !== product);
+  };
+
   return (
     <div>
       <h1>Welcome!</h1>
-      <h3>{product}</h3>
+      {buttons()}
+      <h2>{product}</h2>
       {!data ? null :
         <WindowList
           height={500}
           width={600}
           columnCount={5}
           columnWidth={100}
-          rowCount={Object.values(data).length}
+          rowCount={data.length}
           rowHeight={50}
-          itemData={Object.values(data)}
+          itemData={data}
           style={{ borderBottomWidth: 1 }}
         >
           {Row}
@@ -182,9 +265,7 @@ const App = () => {
   );
 };
 
-const Row = (props) => {
-  console.log({ props });
-  const { style, columnIndex, rowIndex, data } = props;
+const Row = ({ style, columnIndex, rowIndex, data }) => {
   const item = data[rowIndex];
   return (
     <div style={{ ...style, borderBottomWidth: 1 }}>
