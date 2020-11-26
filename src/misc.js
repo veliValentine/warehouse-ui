@@ -5,6 +5,15 @@ export const title = (text) => {
   return first.toUpperCase().concat(rest.join(''));
 };
 
+let timeoutID;
+export const newError = (message, error, setError) => {
+  clearTimeout(timeoutID);
+  setError(message);
+  timeoutID = setTimeout(() => {
+    setError(null);
+  }, 1000 * 5);
+};
+
 export const Instockvalue = ({ children }) => {
   switch (children.props.children) {
     case 'INSTOCK':
@@ -19,3 +28,13 @@ export const Instockvalue = ({ children }) => {
 };
 
 export const Availability = ({ children }) => children;
+
+export const ErrorComponent = ({ message }) => (
+  <div style={{
+    color: 'red',
+    padding: 5,
+    fontWeight: 'bold',
+    fontSize: 'large'
+  }}> {message}
+  </div>
+);
