@@ -2,23 +2,18 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import JsxParser from 'react-jsx-parser';
 
-import Table from './components/Table';
+import { title, Availability, Instockvalue } from './misc';
+
 import { FixedSizeGrid as WindowList } from 'react-window';
+import Buttons from './components/Buttons';
 
 const baseURI = 'https://bad-api-assignment.reaktor.com';
-
-const ReadAvailability = ({ children }) => children;
 
 const App = () => {
   const [product, setProduct] = useState('shirts');
   const [productData, setProductData] = useState(null);
   const [availabilityData, setAvailabilityData] = useState(null);
   const [data, setData] = useState(null);
-
-  //console.log({ productData });
-  //console.log({ availabilityData });
-  console.log({ data });
-  console.log('main');
 
   const getProduct = () => {
     return axios.get(`${baseURI}/products/${product}`);
@@ -31,9 +26,27 @@ const App = () => {
     );
   };
 
+  //get product from server
+  useEffect(() => {
+    getProduct()
+      .then(({ data }) => {
+        const newData = data.map(item => ({
+          0: item.name,
+          1: item.manufacturer,
+          2: item.color,
+          3: item.price,
+          4: 'loading...',
+          ...item,
+        }));
+        setProductData(newData);
+        setData(newData);
+      });
+  }, [product]);
+
+
+  //get manufacturer data from server
   useEffect(() => {
     if (productData) {
-      console.log('toka effect');
       // Hae muuttujaan jo olemassa olvea data ja filtteröi haettavista merkeistä jo olemassa olevat
       let manufacturerData = [];
       const uniqueManufacturer = productData
@@ -60,25 +73,9 @@ const App = () => {
     }
   }, [productData]);
 
-  useEffect(() => {
-    console.log('eka effect');
-    getProduct()
-      .then(({ data }) => {
-        setProductData(data);
-        setData(data.map(item => ({
-          0: item.name,
-          1: item.manufacturer,
-          2: item.color,
-          3: item.price,
-          4: 'loading...'
-        })));
-      });
-  }, [product]);
-
-
+  //join manufactuer data with product data
   useEffect(() => {
     if (availabilityData) {
-      console.log('kolmas effect');
       const allAvailabilityData = Object.keys(availabilityData)
         .reduce((arr, manufacturer) => {
           return [...arr, ...availabilityData[manufacturer]];
@@ -93,35 +90,27 @@ const App = () => {
           1: product.manufacturer,
           2: product.color.join(' '),
           3: product.price,
-          4: <JsxParser components={{ AVAILABILITY: ReadAvailability, INSTOCKVALUE: ReadAvailability }} jsx={manufacturer.availability} />,
+          4: <JsxParser components={{ AVAILABILITY: Availability, INSTOCKVALUE: Instockvalue }} jsx={manufacturer.availability.trim()} />,
           id: product.id,
           type: product.type,
         };
         return completeProduct;
       });
-      setData(productWithAvailability);
+      const productsWithoutAvailability = productData.filter(({ id }) => !commonIds.includes(id));
+      setData([...productWithAvailability, ...productsWithoutAvailability]);
     }
   }, [availabilityData]);
-
-  const buttons = () => {
-    const buttons = [
-      <button key={'jackets'} onClick={() => setProduct('jackets')}>Jackets</button>,
-      <button key={'shirts'} onClick={() => setProduct('shirts')}>Shirts</button>,
-      <button key={'accessories'} onClick={() => setProduct('accessories')}>Accessories</button>,
-    ];
-
-    return buttons.filter(button => button.key !== product);
-  };
 
   return (
     <div>
       <h1>Welcome!</h1>
-      {buttons()}
-      <h2>{product}</h2>
-      {!data ? null :
+      <Buttons setProduct={setProduct} />
+      <h2>{title(product)}</h2>
+
+      {!data || data[0].type !== product ? 'loading...' :
         <WindowList
-          height={500}
-          width={600}
+          height={screen.height - 200}
+          width={500}
           columnCount={5}
           columnWidth={100}
           rowHeight={50}
@@ -136,7 +125,7 @@ const App = () => {
   );
 };
 
-const Row = ({ style, columnIndex, rowIndex, data }) => {
+export const Row = ({ style, columnIndex, rowIndex, data }) => {
   const item = data[rowIndex];
   /*
   item {
