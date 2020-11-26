@@ -14,6 +14,7 @@ const App = () => {
   const [productData, setProductData] = useState(null);
   const [availabilityData, setAvailabilityData] = useState(null);
   const [data, setData] = useState(null);
+  const [finalData, setFinalData] = useState([]);
 
   const getProduct = () => {
     return axios.get(`${baseURI}/products/${product}`);
@@ -22,25 +23,30 @@ const App = () => {
   const getAvailability = (availability) => {
     //console.log('getAvailability');
     return axios.get(`${baseURI}/availability/${availability}`
-      //, { headers: { 'x-force-error-mode': 'all' } }
+      , { headers: { 'x-force-error-mode': 'all' } }
     );
   };
 
   //get product from server
   useEffect(() => {
-    getProduct()
-      .then(({ data }) => {
-        const newData = data.map(item => ({
-          0: item.name,
-          1: item.manufacturer,
-          2: item.color,
-          3: item.price,
-          4: 'loading...',
-          ...item,
-        }));
-        setProductData(newData);
-        setData(newData);
-      });
+    if (finalData && finalData[product]) {
+      console.log('from final data');
+      setData(finalData[product]);
+    } else {
+      getProduct()
+        .then(({ data }) => {
+          const newData = data.map(item => ({
+            0: item.name,
+            1: item.manufacturer,
+            2: item.color,
+            3: item.price,
+            4: 'loading...',
+            ...item,
+          }));
+          setProductData(newData);
+          setData(newData);
+        });
+    }
   }, [product]);
 
 
@@ -97,9 +103,17 @@ const App = () => {
         return completeProduct;
       });
       const productsWithoutAvailability = productData.filter(({ id }) => !commonIds.includes(id));
-      setData([...productWithAvailability, ...productsWithoutAvailability]);
+      const newData = [...productWithAvailability, ...productsWithoutAvailability];
+      setData(newData);
+      const newFinalData = finalData;
+      newFinalData[newData[0].type] = newData;
+      setFinalData(newFinalData);
     }
   }, [availabilityData]);
+
+  if (data) {
+    console.log(product, data[0].type);
+  }
 
   return (
     <div>
@@ -110,13 +124,18 @@ const App = () => {
       {!data || data[0].type !== product ? 'loading...' :
         <WindowList
           height={screen.height - 200}
-          width={500}
+          width={screen.width}
           columnCount={5}
-          columnWidth={100}
+          columnWidth={(screen.width - 50) / 5}
           rowHeight={50}
-          rowCount={data.length}
-          itemData={data}
-          style={{ borderBottomWidth: 1 }}
+          rowCount={data.length + 1}
+          itemData={[{
+            0: 'Name',
+            1: 'manufacturer',
+            2: 'Color',
+            3: 'Price',
+            4: 'Availability'
+          }].concat(data)}
         >
           {Row}
         </WindowList>
@@ -125,20 +144,21 @@ const App = () => {
   );
 };
 
-export const Row = ({ style, columnIndex, rowIndex, data }) => {
+const Row = ({ style, columnIndex, rowIndex, data }) => {
   const item = data[rowIndex];
-  /*
-  item {
-    0: name
-    1: manufacturer
-    2: color
-    3: price
-    4: availability
+
+  if (rowIndex === 0) {
+    style = {
+      ...style,
+      fontWeight: 'bold',
+      fontSize: 'larger',
+    };
   }
-  */
   return (
-    <div style={{ ...style, borderBottomWidth: 1 }}>
-      {item[columnIndex]}
+    <div style={{ ...style, border: 'thin solid black' }}>
+      {columnIndex !== 0 || rowIndex === 0 ? item[columnIndex] :
+        rowIndex + ' ' + item[columnIndex]
+      }
     </div>
   );
 };
