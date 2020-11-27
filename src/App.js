@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import JsxParser from 'react-jsx-parser';
 
-import { title, Availability, Instockvalue, ErrorComponent, newError } from './misc';
+import { title, Availability, Instockvalue, ErrorComponent, newError, uniqueManufacturer } from './misc';
 import service from './service/service';
 
 import { FixedSizeGrid as WindowList } from 'react-window';
@@ -21,6 +21,7 @@ const App = () => {
     if (finalData && finalData[product]) {
       //set data if already fetched from server
       setData(finalData[product]);
+      setProductData(finalData[product]);
     } else {
       //get product data from server
       service.getProduct(product)
@@ -38,7 +39,9 @@ const App = () => {
               2: item.color.join(' '),
               3: item.price,
               4: availability ? availability.availability : 'loading...',
-              ...item,
+              id: item.id,
+              type: item.type,
+              manufacturer: item.manufacturer,
             });
           });
           setProductData(newData); //Used to get availability information
@@ -46,8 +49,8 @@ const App = () => {
         })
         .catch(e => {
           if (e instanceof Error) {
-            console.error(e.message);
-            newError('Failed to get product information', error, setError);
+            console.error(e.name, e.message);
+            newError('Failed to get product information', setError);
           }
         });
     }
@@ -58,20 +61,20 @@ const App = () => {
   useEffect(() => {
     if (productData) {
       let manufacturerData = [];
-      let uniqueManufacturer = productData
-        .map(product => product.manufacturer)
-        .filter((v, i, s) => s.indexOf(v) === i);
-
+      let uniqueMan = uniqueManufacturer(productData);
       if (availabilityData) {
         //Won't get availability data from server if we already have it!
         const keys = Object.keys(availabilityData);
-        uniqueManufacturer = uniqueManufacturer.filter(item => !keys.includes(item));
+        keys.forEach(key => {
+          manufacturerData[key] = availabilityData[key];
+        });
+        uniqueMan = uniqueMan.filter(item => !keys.includes(item));
       }
-      Promise.all(uniqueManufacturer
+      Promise.all(uniqueMan
         .map(uniqueManufacturer => service.getAvailability(uniqueManufacturer)))
         .then(responses => {
           responses.forEach((response, index) => {
-            const manufacturer = uniqueManufacturer[index];
+            const manufacturer = uniqueMan[index];
             const responseData = response.data.response;
             if (typeof responseData === 'object') {
               //See if data send by server is what we want
@@ -86,8 +89,8 @@ const App = () => {
         })
         .catch(e => {
           if (e instanceof Error) {
-            console.error(e.message);
-            newError('Failed to contact availability server', error, setError);
+            console.error(e.name, e.message);
+            newError('Failed to contact availability server', setError);
           }
         })
         .finally(() => setAvailabilityData(manufacturerData));//Save availability data
@@ -103,35 +106,70 @@ const App = () => {
         }, [])
         .map(item => item.id);
       //commond IDs is list of product IDs that have availability data available
-      const commonIds = productData.filter(({ id }) => allAvailabilityIds.includes(id)).map(item => item.id);
+      const commonIds = productData
+        .filter(({ id }) => allAvailabilityIds.includes(id))
+        .map(item => item.id);
       const productWithAvailability = commonIds.map(id => {
         //create new product object with availability data
         const product = productData.find(item => item.id === id);
         const manufacturer = availabilityData[product.manufacturer].find(item => item.id === id);
-        if (product.color !== 'string') {
-          product.color = product.color.join(' ');
+        if (typeof product[2] !== 'string') {
+          product[2] = product[2].join(' ');
         }
         return {
-          0: product.name,
-          1: product.manufacturer,
-          2: product.color,
-          3: product.price,
+          ...product,
           4: manufacturer.availability,
-          id: product.id,
-          type: product.type,
         };
       });
-      //get products without availability information
-      const productsWithoutAvailability = productData.filter(({ id }) => !commonIds.includes(id));
+      //get products without availability information and add reload button to availability
+      const productsWithoutAvailability = productData
+        .filter(({ id }) => !commonIds.includes(id))
+        .map(item => ({
+          ...item,
+          4: <button onClick={() => reload(item.manufacturer)}>Reload</button>
+        }));
+      //render new data
+      let newData = [];
+      newData = [...productWithAvailability, ...productsWithoutAvailability];
+      if (product === newData[0].type) {
+        setData([].concat(newData));
+      }
       //save all product information
-      const newData = [...productWithAvailability, ...productsWithoutAvailability];
-      setData(newData);//render new data
       const newFinalData = finalData;
       newFinalData[newData[0].type] = newData;
       setFinalData(newFinalData); //saved for later use
+      setProduct(''.concat(product));
     }
   }, [availabilityData]);
 
+  const reload = (manufacturer) => {
+    service.getAvailability(manufacturer)
+      .then(response => {
+        const responseData = response.data.response;
+        if (typeof responseData === 'object') {
+          let newAvailabilityData = [];
+          if (availabilityData) {
+            Object.keys(availabilityData)
+              .forEach(key => {
+                newAvailabilityData[key] = availabilityData[key];
+              });
+          }
+          newAvailabilityData[manufacturer] = responseData.map(obj => ({
+            id: obj.id.toLowerCase(),
+            availability: <JsxParser components={{ AVAILABILITY: Availability, INSTOCKVALUE: Instockvalue }} jsx={obj.DATAPAYLOAD.trim()} />
+          }));
+          setAvailabilityData(newAvailabilityData);
+        } else {
+          console.error(`server failed to get data for ${manufacturer}`);
+        }
+      })
+      .catch(e => {
+        if (e instanceof Error) {
+          console.error(e.name, e.message);
+          newError('Failed to contact availability server', manufacturer, setError);
+        }
+      });
+  };
 
   const gridRef = React.createRef();
 
@@ -139,8 +177,6 @@ const App = () => {
     if (search.trim() === '') {
       return null;
     }
-    //hunkox rain 1
-    //HUNKOX RAIN BRIGHT 18
     if (data) {
       const filteredData = data.filter(item => item[0].toLowerCase().includes(search.toLowerCase().trim()));
       const l = filteredData.length;
@@ -150,7 +186,6 @@ const App = () => {
       if (l > 10) {
         return 'Too many results!';
       }
-      //console.log(data.map(item => item[0]).indexOf(m[0]));
       return filteredData.map((item) => {
         const name = item[0];
         const i = data.indexOf(item);
@@ -169,6 +204,7 @@ const App = () => {
       });
     }
   };
+
   return (
     <div>
       <h1>Welcome!</h1>
@@ -181,16 +217,27 @@ const App = () => {
             id='searchInput'
             onChange={(event) => setSearch(event.target.value)}
             value={search}
-            placeholder={'Filter by product by name'}
+            placeholder={'Search by product by name'}
           />
         </form>
-        <p>{goTo()}</p>
+        <p>
+          <button
+            onClick={() => gridRef.current.scrollToItem({
+              columnIndex: 0,
+              rowIndex: 0,
+              align: 'start'
+            })}
+          >
+            Top
+          </button>
+          {goTo()}
+        </p>
         {!data || data[0].type !== product ? 'loading...' :
           <div>
             <p>{data.length} {product} in database</p>
 
             <WindowList
-              height={50 * 50}
+              height={screen.height - 250}
               width={screen.width - 50}
               columnCount={5}
               columnWidth={screen.width > 600 ? (screen.width - 70) / 5 : 150}
