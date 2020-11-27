@@ -14,18 +14,22 @@ const App = () => {
   const [data, setData] = useState(null);
   const [finalData, setFinalData] = useState([]);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
 
   //get product from server
   useEffect(() => {
     if (finalData && finalData[product]) {
+      //set data if already fetched from server
       setData(finalData[product]);
     } else {
+      //get product data from server
       service.getProduct(product)
         .then(({ data }) => {
           const newData = data.map(item => {
             const manufacturer = item.manufacturer;
             let availability;
             if (availabilityData && availabilityData[manufacturer]) {
+              //See if availability information already exsists
               availability = availabilityData[manufacturer].find(obj => item.id === obj.id);
             }
             return ({
@@ -37,8 +41,8 @@ const App = () => {
               ...item,
             });
           });
-          setProductData(newData);
-          setData(newData);
+          setProductData(newData); //Used to get availability information
+          setData(newData); //Data is used to render data
         })
         .catch(e => {
           if (e instanceof Error) {
@@ -53,7 +57,6 @@ const App = () => {
   //get manufacturer data from server
   useEffect(() => {
     if (productData) {
-      // Hae muuttujaan jo olemassa olvea data ja filtteröi haettavista merkeistä jo olemassa olevat
       let manufacturerData = [];
       let uniqueManufacturer = productData
         .map(product => product.manufacturer)
@@ -71,7 +74,7 @@ const App = () => {
             const manufacturer = uniqueManufacturer[index];
             const responseData = response.data.response;
             if (typeof responseData === 'object') {
-              //tallenna data
+              //See if data send by server is what we want
               manufacturerData[manufacturer] = responseData.map(item => ({
                 id: item.id.toLowerCase(),
                 availability: <JsxParser components={{ AVAILABILITY: Availability, INSTOCKVALUE: Instockvalue }} jsx={item.DATAPAYLOAD.trim()} />
@@ -87,20 +90,22 @@ const App = () => {
             newError('Failed to contact availability server', error, setError);
           }
         })
-        .finally(() => setAvailabilityData(manufacturerData));
+        .finally(() => setAvailabilityData(manufacturerData));//Save availability data
     }
   }, [productData]);
 
   //join manufacturer data with product data
   useEffect(() => {
     if (availabilityData) {
-      const allAvailabilityData = Object.keys(availabilityData)
+      const allAvailabilityIds = Object.keys(availabilityData)
         .reduce((arr, manufacturer) => {
           return [...arr, ...availabilityData[manufacturer]];
         }, [])
         .map(item => item.id);
-      const commonIds = productData.filter(({ id }) => allAvailabilityData.includes(id)).map(item => item.id);
+      //commond IDs is list of product IDs that have availability data available
+      const commonIds = productData.filter(({ id }) => allAvailabilityIds.includes(id)).map(item => item.id);
       const productWithAvailability = commonIds.map(id => {
+        //create new product object with availability data
         const product = productData.find(item => item.id === id);
         const manufacturer = availabilityData[product.manufacturer].find(item => item.id === id);
         return {
@@ -113,44 +118,97 @@ const App = () => {
           type: product.type,
         };
       });
+      //get products without availability information
       const productsWithoutAvailability = productData.filter(({ id }) => !commonIds.includes(id));
+      //save all product information
       const newData = [...productWithAvailability, ...productsWithoutAvailability];
-      setData(newData);
+      setData(newData);//render new data
       const newFinalData = finalData;
       newFinalData[newData[0].type] = newData;
-      setFinalData(newFinalData);
+      setFinalData(newFinalData); //saved for later use
     }
   }, [availabilityData]);
 
+
+  const gridRef = React.createRef();
+
+  const goTo = () => {
+    if (search.trim() === '') {
+      return null;
+    }
+    //hunkox rain 1
+    //HUNKOX RAIN BRIGHT 18
+    if (data) {
+      const filteredData = data.filter(item => item[0].toLowerCase().includes(search.toLowerCase().trim()));
+      const l = filteredData.length;
+      if (l < 1) {
+        return 'No results';
+      }
+      if(l > 10) {
+        return 'Too many results!';
+      }
+      //console.log(data.map(item => item[0]).indexOf(m[0]));
+      return filteredData.map((item) => {
+        const name = item[0];
+        const i = data.indexOf(item);
+        return (
+          <button
+            key={name}
+            onClick={() => gridRef.current.scrollToItem({
+              columnIndex: 0,
+              rowIndex: i+1,
+              align: 'start'
+            })}
+          >
+            {`${name} @ row ${i + 1}`}
+          </button>
+        );
+      });
+    }
+    console.log(search);
+  };
   return (
     <div>
       <h1>Welcome!</h1>
       <Buttons setProduct={setProduct} />
       <ErrorComponent message={error} />
-      {!data || data[0].type !== product ? 'loading...' :
-        <div>
-          <h2>{title(product)}</h2>
-          <p>{data.length} {product} in database</p>
-          <WindowList
-            height={50 * 50}
-            width={screen.width - 50}
-            columnCount={5}
-            columnWidth={(screen.width - 70) / 5}
-            rowHeight={50}
-            rowCount={data.length + 1}
-            overscanRowCount={50}
-            itemData={[{
-              0: 'Name',
-              1: 'Manufacturer',
-              2: 'Color',
-              3: 'Price',
-              4: 'Availability'
-            }].concat(data)}
-          >
-            {Row}
-          </WindowList>
-        </div>
-      }
+      <div>
+        <h2>{title(product)}</h2>
+        <form>
+          <input
+            id='searchInput'
+            onChange={(event) => setSearch(event.target.value)}
+            value={search}
+            placeholder={'Filter by product by name'}
+          />
+        </form>
+        <p>{goTo()}</p>
+        {!data || data[0].type !== product ? 'loading...' :
+          <div>
+            <p>{data.length} {product} in database</p>
+
+            <WindowList
+              height={50 * 50}
+              width={screen.width - 50}
+              columnCount={5}
+              columnWidth={(screen.width - 70) / 5}
+              rowHeight={50}
+              rowCount={data.length + 1}
+              overscanRowCount={50}
+              itemData={[{
+                0: 'Name',
+                1: 'Manufacturer',
+                2: 'Color',
+                3: 'Price',
+                4: 'Availability'
+              }].concat(data)}
+              ref={gridRef}
+            >
+              {Row}
+            </WindowList>
+          </div>
+        }
+      </div>
     </div >
   );
 };
