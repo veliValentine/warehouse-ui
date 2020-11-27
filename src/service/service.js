@@ -8,7 +8,6 @@ const getProduct = (product) => {
 };
 
 const getAvailability = (availability, error) => {
-  //console.log('getAvailability');
   return axios.get(`${baseURI}/availability/${availability}`
     , { headers: { 'x-force-error-mode': error ? 'all' : '' } }
   );
