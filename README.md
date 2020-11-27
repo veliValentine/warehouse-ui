@@ -2,11 +2,12 @@
 
 
 <br>
+<h2>
 Application is running at 
 <a href="https://warehouse-ui.herokuapp.com/">Heroku </a>.
-
+</h2>
 <hr/>
-Assignment information found <a href="https://www.reaktor.com/junior-dev-assignment/">here!</a>
+Assignment information found <a href="https://www.reaktor.com/junior-dev-assignment/">here!</a> or below.
 <h3>Instructions</h3>
 Your client is a clothing brand that is looking for a simple web app to use in their warehouses. To do their work efficiently, the warehouse workers need a fast and simple listing page per product category, where they can check simple product and availability information from a single UI.
 
