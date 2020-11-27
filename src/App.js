@@ -35,7 +35,7 @@ const App = () => {
             return ({
               0: item.name,
               1: manufacturer,
-              2: item.color,
+              2: item.color.join(' '),
               3: item.price,
               4: availability ? availability.availability : 'loading...',
               ...item,
@@ -108,10 +108,13 @@ const App = () => {
         //create new product object with availability data
         const product = productData.find(item => item.id === id);
         const manufacturer = availabilityData[product.manufacturer].find(item => item.id === id);
+        if (product.color !== 'string') {
+          product.color = product.color.join(' ');
+        }
         return {
           0: product.name,
           1: product.manufacturer,
-          2: product.color.join(' '),
+          2: product.color,
           3: product.price,
           4: manufacturer.availability,
           id: product.id,
@@ -144,7 +147,7 @@ const App = () => {
       if (l < 1) {
         return 'No results';
       }
-      if(l > 10) {
+      if (l > 10) {
         return 'Too many results!';
       }
       //console.log(data.map(item => item[0]).indexOf(m[0]));
@@ -156,7 +159,7 @@ const App = () => {
             key={name}
             onClick={() => gridRef.current.scrollToItem({
               columnIndex: 0,
-              rowIndex: i+1,
+              rowIndex: i + 1,
               align: 'start'
             })}
           >
@@ -165,7 +168,6 @@ const App = () => {
         );
       });
     }
-    console.log(search);
   };
   return (
     <div>
@@ -191,7 +193,7 @@ const App = () => {
               height={50 * 50}
               width={screen.width - 50}
               columnCount={5}
-              columnWidth={(screen.width - 70) / 5}
+              columnWidth={screen.width > 600 ? (screen.width - 70) / 5 : 150}
               rowHeight={50}
               rowCount={data.length + 1}
               overscanRowCount={50}
