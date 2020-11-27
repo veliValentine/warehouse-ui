@@ -1,12 +1,13 @@
 ## Hola!
 
-Assignment information found <a href="https://www.reaktor.com/junior-dev-assignment/">here!</a>
+
 <br>
 Application is running at 
 <a href="https://warehouse-ui.herokuapp.com/">Heroku </a>.
 
 <hr/>
-Instructions
+Assignment information found <a href="https://www.reaktor.com/junior-dev-assignment/">here!</a>
+<h3>Instructions</h3>
 Your client is a clothing brand that is looking for a simple web app to use in their warehouses. To do their work efficiently, the warehouse workers need a fast and simple listing page per product category, where they can check simple product and availability information from a single UI.
 
 There are three product categories they are interested in for now: jackets, shirts, and accessories. Therefore, you should implement three web pages corresponding to those categories that list all the products in a given category. One requirement is to be easily able to switch between product categories quickly. You are free to implement any UI you want, as long as it can display multiple products at once in a straightforward and explicit listing. At this point, it is not necessary to implement filtering or pagination functionality on the page.
