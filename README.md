@@ -6,7 +6,7 @@ Application is running at
 <a href="https://warehouse-ui.herokuapp.com/">Heroku </a>.
 
 
-</hr>
+<hr/>
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
