@@ -1,7 +1,12 @@
 ## Hola!
 
-<a href="https://www.reaktor.com/junior-dev-assignment/">Assignment</a>
+Assignment information found <a href="https://www.reaktor.com/junior-dev-assignment/">here!</a>
+<br>
+Application is running at 
+<a href="https://warehouse-ui.herokuapp.com/">Heroku </a>.
 
+
+</hr>
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
