@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { title, newError, uniqueManufacturer, arrayKeys, pareseAvailabilityData } from './misc';
+import { title, newError, uniqueManufacturer, arrayKeys, parseAvailabilityData } from './misc';
 import service from './service/service';
 
 import Buttons from './components/Buttons';
@@ -62,38 +62,13 @@ const App = () => {
   //get manufacturer data from server
   useEffect(() => {
     if (productData) {
-      let manufacturerData = [];
       let uniqueMan = uniqueManufacturer(productData);
       if (availabilityData) {
         //Won't get availability data from server if we already have it!
         const keys = arrayKeys(availabilityData);
-        keys.forEach(key => {
-          manufacturerData[key] = availabilityData[key];
-        });
         uniqueMan = uniqueMan.filter(item => !keys.includes(item));
       }
-      Promise.all(uniqueMan
-        .map(uniqueManufacturer => service.getAvailability(uniqueManufacturer))
-      ).then(responses => {
-        responses.forEach((response, index) => {
-          const manufacturer = uniqueMan[index];
-          const responseData = response.data.response;
-
-          //See if data sent by server is what we want
-          if (typeof responseData === 'object') {
-            manufacturerData[manufacturer] = pareseAvailabilityData(responseData);
-          } else {
-            newError(`Server failed to get data for ${manufacturer}`, setError);
-          }
-        });
-      })
-        .catch(e => {
-          if (e instanceof Error) {
-            console.error(e.name, e.message);
-            newError('Failed to contact availability server', setError);
-          }
-        })
-        .finally(() => setAvailabilityData(manufacturerData));//Save availability data
+      getAvailabilityDataFromServer(uniqueMan);
     }
   }, [productData]);
 
@@ -148,33 +123,42 @@ const App = () => {
 
   //used by reload button to refetch availability data from server
   const reload = (manufacturer) => {
-    service.getAvailability(manufacturer)
-      .then(response => {
-        const responseData = response.data.response;
-        if (typeof responseData === 'object') {
-          let newAvailabilityData = [];
+    getAvailabilityDataFromServer([manufacturer]);
+  };
 
-          //make sure that data already fetch from server isn't lost
-          if (availabilityData) {
-            arrayKeys(availabilityData)
-              .forEach(key => {
-                newAvailabilityData[key] = availabilityData[key];
-              });
+  const getAvailabilityDataFromServer = (manufacturers) => {
+    if (Array.isArray(manufacturers)) {
+      const newAvailabilityData = [];
+      //make sure that data already fetch from server isn't lost
+      if (availabilityData) {
+        arrayKeys(availabilityData)
+          .forEach(key => {
+            newAvailabilityData[key] = availabilityData[key];
+          });
+      }
+      Promise.all(manufacturers.map(manufacturer => service.getAvailability(manufacturer)))
+        .then(responses => {
+          responses.forEach((response, index) => {
+            const manufacturer = manufacturers[index];
+            const responseData = response.data.response;
+            //See if data sent by server is what we want
+            if (typeof responseData === 'object') {
+              newAvailabilityData[manufacturer] = parseAvailabilityData(responseData);
+            } else {
+              newError(`Server failed to get data for ${manufacturer}`, setError);
+            }
+          });
+        })
+        .catch(e => {
+          if (e instanceof Error) {
+            console.error(e.name, e.message);
+            newError('Failed to contact availability server', setError);
           }
-
-          //save data
-          newAvailabilityData[manufacturer] = pareseAvailabilityData(responseData);
-          setAvailabilityData(newAvailabilityData);
-        } else {
-          newError(`server failed to get data for ${manufacturer}`, setError);
-        }
-      })
-      .catch(e => {
-        if (e instanceof Error) {
-          console.error(e.name, e.message);
-          newError(`Failed to contact availability server for ${manufacturer}`, setError);
-        }
-      });
+        })
+        .finally(() => setAvailabilityData(newAvailabilityData));
+    } else {
+      console.error(`Type passed to getAvailabilityDataFromServer is not array. Typeof ${typeof manufacturers}`);
+    }
   };
 
   const gridRef = React.createRef();

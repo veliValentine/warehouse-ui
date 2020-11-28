@@ -28,7 +28,7 @@ export const uniqueManufacturer = (arr) => (
 
 export const arrayKeys = (arr) => Object.keys(arr);
 
-export const pareseAvailabilityData = (arr) => (
+export const parseAvailabilityData = (arr) => (
   arr.map(obj => ({
     id: obj.id.toLowerCase(),
     //convert availability data to React component
